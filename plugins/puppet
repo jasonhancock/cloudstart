@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Config::IniFiles;
+
+open IN, "<$ARGV[0]" or die("Can't open $ARGV[0] for input");
+my %data;
+
+my $puppet_conf = defined($ENV{'puppet_conf'}) 
+    ? $ENV{'puppet_conf'}
+    : '/etc/puppet/puppet.conf';
+
+# Load up the user-data
+while(my $line=<IN>){
+    chomp($line);
+    if($line=~m/^(.+?)=(.+)$/) {
+        $data{$1} = $2;
+    }
+}
+close IN;
+
+if(defined($data{'environment'})) {
+    my $cfg = Config::IniFiles->new( -file => $puppet_conf);
+    if($cfg->exists('agent', 'environment')) {
+        $cfg->setval('agent', 'environment', $data{'environment'});
+    } else {
+        $cfg->newval('agent', 'environment', $data{'environment'});
+    }
+    $cfg->WriteConfig($puppet_conf);
+}

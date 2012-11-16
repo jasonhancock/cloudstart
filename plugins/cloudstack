@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use LWP;
+
+my @dirs = ('/var/lib/dhclient', '/var/lib/dhcp3');
+
+foreach my $dir(@dirs) {
+    next unless (-d $dir);
+    opendir (DIR, $dir) or die $!;
+    while (my $file = readdir(DIR)) {
+        next unless $file=~m/dhclient.+lease/;
+        open IN, "<$dir/$file" or die("Can't read $dir/$file");
+        my $virtual_router;
+        while(my $line=<IN>) {
+            $virtual_router = $1 if $line=~m/dhcp-server-identifier\s+(\d+\.\d+\.\d+\.\d+);/;
+        }
+        close IN;
+        
+        if(defined($virtual_router)) {
+            my $ua = new LWP::UserAgent;
+            my $response = $ua->get("http://$virtual_router/latest/user-data");
+
+            if (!$response->is_success) {
+                print STDERR "Unable to get user-data: " . $response->code . ": " . $response->status_line;
+                next;
+            }
+
+            open OUT, ">>$ARGV[0]" or die("Can't open $ARGV[0] in append mode");
+            print OUT $response->decoded_content . "\n";
+
+            $response = $ua->get("http://$virtual_router/latest/instance-id");
+            if (!$response->is_success) {
+                print STDERR "Unable to get instance-id: " . $response->code . ": " . $response->status_line;
+                next;
+            }
+            print OUT "instance-id=" . $response->decoded_content . "\n";
+
+            close OUT;
+        }
+    }
+    closedir(DIR);
+}
