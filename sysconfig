@@ -1,2 +1,2 @@
-PLUGINS_DIR=/usr/share/cloud-start/plugins
+PLUGINS_DIR=/usr/share/cloudstart/plugins
 PLUGINS="cloudstack hostname puppet"
